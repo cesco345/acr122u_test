@@ -250,129 +250,133 @@ MIFARE Classic cards support "value blocks" that include built-in increment/decr
 - [PC/SC Workgroup](https://pcscworkgroup.com/)
 - [Rust pcsc crate documentation](https://docs.rs/pcsc/latest/pcsc/)
 
+## Command Reference
 
-#1 first load the key if needed
+### Key Loading and Authentication
+
+```bash
+# Load the default key
 opensc-tool --reader 0 --send-apdu FF:82:00:00:06:00:00:00:00:00:00
 
-#2 Authenticate sector 1 (which contains block 5)
+# Authenticate sector 1 (which contains block 5)
+opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:04:60:00
+```
+
+### Writing and Reading Data
+
+```bash
+# Write your message to block 5
+opensc-tool --reader 0 --send-apdu FF:D6:00:05:10:48:65:6C:6C:6F:20:59:6F:75:54:75:62:65:21:21:21
+
+# Authenticate sector 1 if needed
 opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:04:60:00
 
-#3 write your message
-opensc-tool --reader 0 - -send-apdu FF:D6:00:05:10:48:65:6C:6C:6F:20:59:6F:75:54:75:62:65:21:21:21
+# Read block 5
+opensc-tool --reader 0 --send-apdu FF:B0:00:05:10
+```
 
+### Reading Sector 0
 
-#4 Authenticate sector 1 if needed
+```bash
+# Authenticate Sector 0 with Key A
+opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:00:60:00
+
+# Read Block 0 (Manufacturer Block with UID)
+opensc-tool --reader 0 --send-apdu FF:B0:00:00:10
+
+# Read Block 1 (Data)
+opensc-tool --reader 0 --send-apdu FF:B0:00:01:10
+
+# Read Block 2 (Data)
+opensc-tool --reader 0 --send-apdu FF:B0:00:02:10
+
+# Read Block 3 (Sector 0 Trailer with Keys)
+opensc-tool --reader 0 --send-apdu FF:B0:00:03:10
+```
+
+### Reading Sector 1
+
+```bash
+# Authenticate Sector 1 with Key A
 opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:04:60:00
 
-#5 read block 5
+# Read Block 4
+opensc-tool --reader 0 --send-apdu FF:B0:00:04:10
+
+# Read Block 5
 opensc-tool --reader 0 --send-apdu FF:B0:00:05:10
 
+# Read Block 6
+opensc-tool --reader 0 --send-apdu FF:B0:00:06:10
 
-
-
-
-
-
-
-
-# Authenticate Sector 0 with Key A 
-opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:00:60:00 
-
-# Read Block 0 (Manufacturer Block with UID) 
-opensc-tool --reader 0 --send-apdu FF:B0:00:00:10 
-
-# Read Block 1 (Data) 
-opensc-tool --reader 0 --send-apdu FF:B0:00:01:10 
-
-# Read Block 2 (Data) 
-opensc-tool --reader 0 --send-apdu FF:B0:00:02:10 
-
-# Read Block 3 (Sector 0 Trailer with Keys) 
-opensc-tool --reader 0 --send-apdu FF:B0:00:03:10
-
-
-
-# Authenticate Sector 1 with Key A 
-opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:04:60:00 
-
-# Read Block 4 
-opensc-tool --reader 0 --send-apdu FF:B0:00:04:10 
-
-# Read Block 5 
-opensc-tool --reader 0 --send-apdu FF:B0:00:05:10 
-
-# Read Block 6 
-opensc-tool --reader 0 --send-apdu FF:B0:00:06:10 
-
-# Read Block 7 (Sector 1 Trailer) 
+# Read Block 7 (Sector 1 Trailer)
 opensc-tool --reader 0 --send-apdu FF:B0:00:07:10
+```
 
+## Bash Script to Read All Sectors
 
+```bash
+#!/bin/bash
 
+# Load the default key
+opensc-tool --reader 0 --send-apdu FF:82:00:00:06:FF:FF:FF:FF:FF:FF
 
+# Loop through all sectors
+for sector in {0..15}
+do
+    echo "Reading Sector $sector:"
 
+    # Calculate the first block in this sector
+    first_block=$((sector * 4))
 
+    # Authenticate with Key A
+    echo " Authenticating..."
+    opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:$(printf "%02x" $first_block):60:00
 
-
-
-
-
-
-
-#!/bin/bash 
-
-# Load the default key o
-pensc-tool --reader 0 --send-apdu FF:82:00:00:06:FF:FF:FF:FF:FF:FF 
-# Loop through all sectors 
-for sector in {0..15} 
-do 
-	echo "Reading Sector $sector:" 
-
-	# Calculate the first block in this sector 
-	first_block=$((sector * 4)) 
-
-	# Authenticate with Key A 
-	echo " Authenticating..." 
-	opensc-tool --reader 0 --send-apdu FF:86:00:00:05:01:00:$(printf "%02x" 			 $first_block):60:00 
-
-	# Read all 4 blocks in this sector 
-	for offset in {0..3} 
-	do 
-		block=$((first_block + offset)) 
-		echo " Reading Block $block:" 
-		opensc-tool --reader 0 --send-apdu FF:B0:00:$(printf "%02x" $block):10 
-	done 
-	echo "" 
+    # Read all 4 blocks in this sector
+    for offset in {0..3}
+    do
+        block=$((first_block + offset))
+        echo " Reading Block $block:"
+        opensc-tool --reader 0 --send-apdu FF:B0:00:$(printf "%02x" $block):10
+    done
+    echo ""
 done
+```
 
+## Device Information
 
-
+```bash
 lsusb
+# Output: Bus 001 Device 004: ID 072f:2200 Advanced Card Systems, Ltd ACR122U
 
-Bus 001 Device 004: ID 072f:2200 Advanced Card Systems, Ltd ACR122U
-
-sudo apt-get update 
+# Install required packages
+sudo apt-get update
 sudo apt-get install -y pcscd pcsc-tools libpcsclite-dev libusb-dev libccid
 
+# Restart the PC/SC daemon and scan for readers
 sudo systemctl restart pcscd
 pcsc_scan
+# Output: PC/SC device scanner
+#         Waiting for the first reader...
+#         Reader: ACS ACR122U PICC Interface 00 00
+```
 
-PC/SC device scanner 
-Waiting for the first reader... 
-Reader: ACS ACR122U PICC Interface 00 00
+## Project Setup
 
+```bash
+# On the Raspberry Pi
+mkdir acr122u_test
+cd acr122u_test
+cargo init
 
-
-# On the Raspberry Pi 
-mkdir acr122u_test 
-cd acr122u_test 
-cargo init 
-
-# Edit Cargo.toml to add dependencies 
+# Edit Cargo.toml to add dependencies
 nano Cargo.toml
+```
 
+Add the following to your Cargo.toml:
 
-
+```toml
 [dependencies]
- pcsc = “2.4"
-
+pcsc = "2.4"
+```
